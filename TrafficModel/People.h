@@ -15,12 +15,10 @@ public:
 	// 修改街道属性
 	void setRoadCapacity(double nCarRoadCapacity, double nWalkRoadCapacity);
 
-private:
-	// 初始化一些变量
-	void init();
+	// 开车的概率
+	double m_nUseCarProbability;
 
-	// 根据交通量计算上次出行的时间
-	double getLastDrivingTime();
+	void setCorrection();
 
 	// 交通类街道效用函数
 	double getCarRoadUtility();
@@ -28,6 +26,13 @@ private:
 	// 生活类街道效用函数
 	double getWalkRoadUtility();
 
+private:
+	// 初始化一些变量
+	void init();
+
+	// 根据交通量计算上次出行的时间
+	double getLastDrivingTime();
+	
 	// 数值计算
 	double NormalExp(double utility, double expect = 0.0, double variance = 1.0);
 	double NormalStats(double utilityMin, double utilityMax, double expect = 0.0, double variance = 1.0);
@@ -42,8 +47,6 @@ private:
 
 	// -----------------------------------------数据区---------------------------------------------------------------------
 
-	// 开车的概率
-	double m_nUseCarProbability;
 
 	// 车道的容量
 	double m_nCarRoadCapacity;

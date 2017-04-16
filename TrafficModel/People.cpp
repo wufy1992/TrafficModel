@@ -9,6 +9,8 @@
 
 static const double eps = 1e-7;
 
+static double correction = 0.60;
+
 // 记录NormalStats已经算过的值，提高效率
 std::map<std::string, double> sMapVis;
 static std::mutex sMapMutex;
@@ -67,8 +69,8 @@ void CPeople::correctUserCarProbability(int nLastCarNumber, int nLastWalkNumber)
 		m_nWalkProfitVariance = ret / m_vecWalkProfit.size();
 
 
-		m_nUseCarProfitVariance = std::max(0.1, m_nUseCarProfitVariance);
-		m_nWalkProfitVariance = std::max(0.1, m_nWalkProfitVariance);
+		m_nUseCarProfitVariance = max(0.1, m_nUseCarProfitVariance);
+		m_nWalkProfitVariance = max(0.1, m_nWalkProfitVariance);
 	}
 
 	if (m_nUseCarProfitVariance > eps && m_nWalkProfitVariance > eps && m_nUseCarProfitMean > eps && m_nWalkProfitMean > eps)
@@ -125,6 +127,7 @@ void CPeople::correctUserCarProbability(int nLastCarNumber, int nLastWalkNumber)
 		double PEWalk = PEWalk1 + PEWalk2 + PEWalk3;
 
 		m_nUseCarProbability = exp(PECar) / (exp(PECar) + exp(PEWalk));
+		m_nUseCarProbability = max(correction, m_nUseCarProbability);
 	}
 }
 
@@ -158,6 +161,12 @@ void CPeople::init()
 	m_nWalkProfitVariance = 0.00;
 }
 
+void CPeople::setCorrection()
+{
+	if (abs(correction - 0.45) > eps)
+		correction -= 0.03;
+}
+
 void CPeople::setRoadCapacity(double nCarRoadCapacity, double nWalkRoadCapacity)
 {
 	m_nCarRoadCapacity = nCarRoadCapacity;
@@ -169,7 +178,7 @@ void CPeople::setRoadCapacity(double nCarRoadCapacity, double nWalkRoadCapacity)
 
 double CPeople::getLastDrivingTime()
 {
-	return (1 + 0.15 * (m_nLastCarNumber / m_nCarRoadCapacity) * (m_nLastCarNumber / m_nCarRoadCapacity)  * (m_nLastCarNumber / m_nCarRoadCapacity)  * (m_nLastCarNumber / m_nCarRoadCapacity)) / 11.00;
+	return (1 + 0.15 * (m_nLastCarNumber / m_nCarRoadCapacity) * (m_nLastCarNumber / m_nCarRoadCapacity)  * (m_nLastCarNumber / m_nCarRoadCapacity)  * (m_nLastCarNumber / m_nCarRoadCapacity));
 }
 
 double CPeople::getCarRoadUtility()
@@ -208,7 +217,7 @@ double CPeople::getValue(double utility, bool bIsCar)
 	}
 	else
 	{
-		return pow((nStandardUtility - nFreeflowUtility), 0.88);
+		return 2.25 * pow((nStandardUtility - nFreeflowUtility), 0.88);
 	}
 }
 
@@ -234,14 +243,14 @@ double CPeople::NormalStats(double utilityMin, double utilityMax, double expect,
 	if (s2 < eps)
 		return 0.00;
 
-	std::string strKey = std::to_string(utilityMin) + std::to_string(utilityMax) + std::to_string(expect) + std::to_string(variance);
-
-	{
-		std::lock_guard<std::mutex> lck(sMapMutex);
-		std::map<std::string, double > ::iterator iter = sMapVis.find(strKey);
-		if (iter != sMapVis.end())
-			return iter->second;
-	}
+// 	std::string strKey = std::to_string(utilityMin) + std::to_string(utilityMax) + std::to_string(expect) + std::to_string(variance);
+// 
+// 	{
+// 		std::lock_guard<std::mutex> lck(sMapMutex);
+//  		std::map<std::string, double > ::iterator iter = sMapVis.find(strKey);
+//  		if (iter != sMapVis.end())
+//  			return iter->second;
+// 	}
 
 
 	for (int i = 1; fabs(s1 - s2) > eps; i *= 2)
@@ -255,12 +264,12 @@ double CPeople::NormalStats(double utilityMin, double utilityMax, double expect,
 		}
 		s2 = (s1 + s2) / 2;
 	}
-	int ans = s2 * sqrt(1 / (8 * atan(1.0) * variance));
+	double ans = s2 * sqrt(1 / (8 * atan(1.0) * variance));
 
-	{
-		std::lock_guard<std::mutex> lck(sMapMutex);
-		sMapVis.insert(make_pair(strKey, ans));
-	}
+// 	{
+// 		std::lock_guard<std::mutex> lck(sMapMutex);
+// 		sMapVis.insert(make_pair(strKey, ans));
+// 	}
 
 	return ans;
 }
